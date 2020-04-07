@@ -27,7 +27,7 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=http://localhost:8765/individual_user_consent/&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2Fcalendars.read%20https%3A%2F%2Fgraph.microsoft.com%2Fmail.send&state=12345")
+		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2Fuser.read&state=12345")
 	})
 
 	r.GET("/individual_user_consent/", func(c *gin.Context) {
@@ -35,7 +35,7 @@ func main() {
 		log.Println("code", responseCode)
 		if responseCode != "" {
 			code = responseCode
-			c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=http://localhost:8765/individual_user_consent/&scope=https://graph.microsoft.com/calendars.read%20https://graph.microsoft.com/mail.send")
+			c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&scope=https://graph.microsoft.com/user.read")
 			return
 		}
 		admin_consent := c.Query("admin_consent")
@@ -46,7 +46,7 @@ func main() {
 		log.Println("scope:", scope)
 
 		req, err := http.NewRequest("POST", "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/token",
-			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=https://outlook.office.com/mail.read https://outlook.office.com/mail.send&redirect_uri=http://localhost:8765/individual_user_consent/&code=`+code))
+			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=https://outlook.office.com/user.read&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&code=`+code))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -64,6 +64,17 @@ func main() {
 		if err = json.Unmarshal(respBody, &response); err != nil {
 			log.Fatal(err)
 		}
+
+		accessToken, ok := response["access_token"]
+		if ok {
+			log.Println("access_token", accessToken)
+		}
+
+		refreshToken, ok := response["refresh_token"]
+		if ok {
+			log.Println("refresh_token", refreshToken)
+		}
+
 		c.JSON(http.StatusOK, &response)
 	})
 
