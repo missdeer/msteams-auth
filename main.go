@@ -27,7 +27,7 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=http://localhost:8765/individual_user_consent/&response_mode=query&scope=offline_access%20user.read&state=12345")
+		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=http://localhost:8765/individual_user_consent/&response_mode=query&scope=offline_access%20user.read.all&state=12345")
 	})
 
 	r.GET("/individual_user_consent/", func(c *gin.Context) {
@@ -35,7 +35,7 @@ func main() {
 		log.Println("code", responseCode)
 		if responseCode != "" {
 			code = responseCode
-			c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=http://localhost:8765/individual_user_consent/&scope=offline_access%20user.read")
+			c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=http://localhost:8765/individual_user_consent/&scope=offline_access%20user.read.all")
 			return
 		}
 		admin_consent := c.Query("admin_consent")
@@ -46,7 +46,7 @@ func main() {
 		log.Println("scope:", scope)
 
 		req, err := http.NewRequest("POST", "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/token",
-			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read&redirect_uri=http://localhost:8765/individual_user_consent/&code=`+code))
+			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all&redirect_uri=http://localhost:8765/individual_user_consent/&code=`+code))
 		if err != nil {
 			log.Fatal(err)
 		}
