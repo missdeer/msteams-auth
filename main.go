@@ -46,7 +46,7 @@ func main() {
 		log.Println("scope:", scope)
 
 		req, err := http.NewRequest("POST", "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/token",
-			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=https://outlook.office.com/user.read&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&code=`+code))
+			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=https://graph.microsoft.com/user.read&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&code=`+code))
 		if err != nil {
 			log.Fatal(err)
 		}
