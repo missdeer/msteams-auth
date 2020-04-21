@@ -1,0 +1,28 @@
+name: Go
+on: [push]
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Build
+      run: |
+        env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o linux-amd64/msteams-auth -ldflags="-s -w" .
+        env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o darwin-amd64/msteams-auth -ldflags="-s -w" .
+        env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o windows-amd64/msteams-auth.exe -ldflags="-s -w" .
+        env CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -o freebsd-amd64/msteams-auth -ldflags="-s -w" .
+        env CGO_ENABLED=0 GOOS=openbsd GOARCH=amd64 go build -o openbsd-amd64/msteams-auth -ldflags="-s -w" .
+        env CGO_ENABLED=0 GOOS=netbsd GOARCH=amd64 go build -o netbsd-amd64/msteams-auth -ldflags="-s -w" .
+        env CGO_ENABLED=0 GOOS=dragonfly GOARCH=amd64 go build -o dragonfly-amd64/msteams-auth -ldflags="-s -w" .
+      
