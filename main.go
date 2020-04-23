@@ -27,48 +27,99 @@ type AccessTokenRequestBody struct {
 	RedirectURI string `json:"redirect_uri"`
 }
 
+type BotMessageFromRecipient struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type BotMessageConversation struct {
+	ID string `json:"id"`
+}
+
 type BotEndpointMessage struct {
-	Type       string    `json:"type"`
-	ID         string    `json:"id"`
-	TimeStamp  time.Time `json:"timestamp"`
-	ServiceURL string    `json:"serviceUrl"`
-	ChannelID  string    `json:"channelId"`
-	From       struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	} `json:"from"`
-	Conversation struct {
-		ID string `json:"id"`
-	} `json:"conversation"`
-	Recipient struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	} `json:"recipient"`
-	TextFormat  string `json:"textFormat"`
-	Locale      string `json:"locale"`
-	Text        string `json:"text"`
-	ChannelData struct {
+	Type         string                  `json:"type"`
+	ID           string                  `json:"id"`
+	TimeStamp    time.Time               `json:"timestamp"`
+	ServiceURL   string                  `json:"serviceUrl"`
+	ChannelID    string                  `json:"channelId"`
+	From         BotMessageFromRecipient `json:"from"`
+	Conversation BotMessageConversation  `json:"conversation"`
+	Recipient    BotMessageFromRecipient `json:"recipient"`
+	TextFormat   string                  `json:"textFormat"`
+	Locale       string                  `json:"locale"`
+	Text         string                  `json:"text"`
+	ChannelData  struct {
 		ClientActivityID string    `json:"clientActivityID"`
 		ClientTimeStamp  time.Time `json:"clientTimestamp"`
+		PostBack         bool      `json:"postBack,omitempty"`
 	} `json:"channelData"`
+	Value struct {
+		PreferCallingTool string `json:"preferCallingTool,omitempty"`
+	} `json:"value,omitempty"`
+}
+
+type BotReplyAttachmentTapAction struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+type BotReplyAttachmentImage struct {
+	URL string                      `json:"url"`
+	Alt string                      `json:"alt"`
+	Tap BotReplyAttachmentTapAction `json:"tap"`
+}
+
+type BotReplyAttachmentButton struct {
+	Type  string `json:"type"`
+	Title string `json:"title"`
+	Image string `json:"image,omitempty"`
+	Value string `json:"value"`
+}
+
+type AdaptiveChoice struct {
+	Title string `json:"title"`
+	Value string `json:"value"`
+}
+
+type AdaptiveElement struct {
+	Type          string           `json:"type"`
+	Text          string           `json:"text"`
+	Size          string           `json:"size,omitempty"`
+	Separation    string           `json:"separation,omitempty"`
+	ID            string           `json:"id,omitempty"`
+	Style         string           `json:"style,omitempty"`
+	IsMultiSelect bool             `json:"isMultiSelect,omitempty"`
+	Value         string           `json:"value,omitempty"`
+	Choices       []AdaptiveChoice `json:"choices,omitempty"`
+}
+
+type AdaptiveAction struct {
+	Type  string `json:"type"`
+	URL   string `json:"url"`
+	Title string `json:"title"`
+}
+
+type BotReplyAttachmentContent struct {
+	Type    string            `json:"type"`
+	Version string            `json:"version"`
+	Body    []AdaptiveElement `json:"body"`
+	Actions []AdaptiveAction  `json:"actions,omitempty"`
+}
+
+type BotReplyAttachment struct {
+	ContentType string                    `json:"contentType"`
+	Content     BotReplyAttachmentContent `json:"content"`
 }
 
 type BotReplyMessage struct {
-	Type string `json:"type"`
-	From struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	} `json:"from"`
-	Conversation struct {
-		ID string `json:"id"`
-	} `json:"conversation"`
-	Recipient struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	} `json:"recipient"`
-	Text       string `json:"text"`
-	TextFormat string `json:"textFormat"`
-	ReplyToId  string `json:"replyToId"`
+	Type         string                  `json:"type"`
+	From         BotMessageFromRecipient `json:"from"`
+	Conversation BotMessageConversation  `json:"conversation"`
+	Recipient    BotMessageFromRecipient `json:"recipient"`
+	Text         string                  `json:"text"`
+	TextFormat   string                  `json:"textFormat"`
+	ReplyToId    string                  `json:"replyToId"`
+	Attachments  []BotReplyAttachment    `json:"attachments,omitempty"`
 }
 
 type BotAccessTokenResponse struct {
@@ -112,16 +163,52 @@ func getBotAccessToken() error {
 func replyBotMessage(msg BotEndpointMessage) error {
 	id := strings.Split(msg.ID, "|")[0]
 	reply := &BotReplyMessage{
-		Type:       `message`,
-		Text:       `I have received **` + msg.Text + `**`,
-		TextFormat: `markdown`,
-		ReplyToId:  id,
+		Type: `message`,
+		//Text:         `I have received **` + msg.Text + `**`,
+		TextFormat:   `markdown`,
+		ReplyToId:    id,
+		From:         msg.Recipient,
+		Recipient:    msg.From,
+		Conversation: msg.Conversation,
+		Attachments: []BotReplyAttachment{
+			{
+				ContentType: "application/vnd.microsoft.card.adaptive",
+				Content: BotReplyAttachmentContent{
+					Type:    "AdaptiveCard",
+					Version: "1.0",
+					Body: []AdaptiveElement{
+						{
+							Type: "TextBlock",
+							Text: "Choose Calling Tool",
+						},
+						{
+							Type:          "Input.ChoiceSet",
+							ID:            "preferCallingTool",
+							Style:         "expanded",
+							IsMultiSelect: false,
+							Value:         "Cisco Jabber",
+							Choices: []AdaptiveChoice{
+								{
+									Title: "Cisco Jabber",
+									Value: "Cisco Jabber",
+								},
+								{
+									Title: "Cisco WebEx Teams",
+									Value: "Cisco WebEx Teams",
+								},
+							},
+						},
+					},
+					Actions: []AdaptiveAction{
+						{
+							Type:  "Action.Submit",
+							Title: "OK",
+						},
+					},
+				},
+			},
+		},
 	}
-	reply.From.ID = msg.Recipient.ID
-	reply.From.Name = msg.Recipient.Name
-	reply.Recipient.ID = msg.From.ID
-	reply.Recipient.Name = msg.From.Name
-	reply.Conversation.ID = msg.Conversation.ID
 
 	b, err := json.Marshal(reply)
 	if err != nil {
@@ -143,13 +230,55 @@ func replyBotMessage(msg BotEndpointMessage) error {
 		return err
 	}
 	defer resp.Body.Close()
-	log.Println(u, string(b))
+	log.Println("post reply message:", u, string(b))
 	b, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("read response body failed", err)
 		return err
 	}
-	log.Println(string(b))
+	log.Println("got reply message response:", string(b))
+	return nil
+}
+
+func botReplySetPreferCallingTool(msg BotEndpointMessage) error {
+	id := strings.Split(msg.ID, "|")[0]
+	reply := &BotReplyMessage{
+		Type:         `message`,
+		Text:         `You are preferring **` + msg.Value.PreferCallingTool + `**`,
+		TextFormat:   `markdown`,
+		ReplyToId:    id,
+		From:         msg.Recipient,
+		Recipient:    msg.From,
+		Conversation: msg.Conversation,
+	}
+
+	b, err := json.Marshal(reply)
+	if err != nil {
+		log.Println("marshalling reply message failed:", err)
+		return err
+	}
+	u := fmt.Sprintf(`%sv3/conversations/%s/activities/%s`, msg.ServiceURL, msg.Conversation.ID, id)
+	req, err := http.NewRequest("POST", u, bytes.NewReader(b))
+	if err != nil {
+		log.Println("generate request failed:", err)
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+botAccessToken)
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("post request failed:", err)
+		return err
+	}
+	defer resp.Body.Close()
+	log.Println("post reply message:", u, string(b))
+	b, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("read response body failed", err)
+		return err
+	}
+	log.Println("got reply message response:", string(b))
 	return nil
 }
 
@@ -165,8 +294,13 @@ func botEndpoint(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"error": fmt.Sprintf("%v", err)})
 		return
 	}
-	log.Println(string(rawData), msg)
+	log.Println("botEndpoint raw data:", string(rawData), msg)
 	c.JSON(http.StatusOK, gin.H{"msg": "OK"})
+	if msg.Value.PreferCallingTool != "" {
+		log.Println("botEndpoint got value:", msg.Value.PreferCallingTool)
+		botReplySetPreferCallingTool(msg)
+		return
+	}
 	replyBotMessage(msg)
 }
 
