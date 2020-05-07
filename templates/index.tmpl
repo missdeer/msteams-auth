@@ -1,0 +1,31 @@
+<html>
+<meta charset="utf-8">
+<title>{{ .title }}</title>
+<script type="text/javascript" src="/js/main.js"></script>
+<body>
+	<h1>
+		{{ .title }}
+	</h1>
+	<hr>
+	<h2>Access Token</h2>
+	<p>{{ .accessToken }}</p>
+	<hr>
+	<h2>Refresh Token</h2>
+	<p>{{ .refreshToken }}</p>
+	<hr>
+
+<textarea id="settings" rows="10" style="width:100%;">
+{
+    "settings": "in Microsoft Graph API Open Extensions",
+    "accessToken": "{{ .accessToken }}",
+    "refreshToken": "{{ .refreshToken }}"
+}
+</textarea>
+<br>
+<button type="button" onclick="readSettings({{ .accessToken }});">read settings</button>
+<button type="button" onclick="createSettings({{ .accessToken }});">create settings</button>
+<button type="button" onclick="updateSettings({{ .accessToken }});">update settings</button>
+<button type="button" onclick="deleteSettings({{ .accessToken }});">delete settings</button>
+
+</body>
+</html>

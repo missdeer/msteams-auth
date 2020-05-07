@@ -15,8 +15,10 @@ import (
 )
 
 var (
-	code           string
-	botAccessToken string
+	code                      string
+	botAccessToken            string
+	authorizationAccessToken  string
+	authorizationRefreshToken string
 )
 
 type AccessTokenRequestBody struct {
@@ -304,6 +306,48 @@ func botEndpoint(c *gin.Context) {
 	replyBotMessage(msg)
 }
 
+func rwsettings(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"title":        "Read/Write Settings in Microsoft Graph API Open Extensions",
+		"accessToken":  authorizationAccessToken,
+		"refreshToken": authorizationRefreshToken,
+	})
+}
+
+func getRefreshToken() {
+	req, err := http.NewRequest("POST", "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+		strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=refresh_token&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&redirect_uri=http://localhost:8765/individual_user_consent/&refresh_token=`+authorizationRefreshToken))
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var response gin.H
+	if err = json.Unmarshal(respBody, &response); err != nil {
+		log.Fatal(err)
+	}
+
+	accessToken, ok := response["access_token"]
+	if ok {
+		log.Println("access_token", accessToken)
+	}
+	authorizationAccessToken = accessToken.(string)
+
+	refreshToken, ok := response["refresh_token"]
+	if ok {
+		log.Println("refresh_token", refreshToken)
+	}
+	authorizationRefreshToken = refreshToken.(string)
+}
+
 func main() {
 	if err := getBotAccessToken(); err != nil {
 		log.Fatal(err)
@@ -311,10 +355,12 @@ func main() {
 
 	r := gin.Default()
 
+	r.LoadHTMLGlob("templates/*")
+
 	r.POST("bot-endpoint", botEndpoint)
 
 	r.GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=http://localhost:8765/individual_user_consent/&response_mode=query&scope=offline_access%20user.read.all%20chat.read&state=12345")
+		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=http://localhost:8765/individual_user_consent/&response_mode=query&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&state=12345")
 	})
 
 	r.GET("/individual_user_consent/", func(c *gin.Context) {
@@ -322,7 +368,7 @@ func main() {
 		log.Println("code", responseCode)
 		if responseCode != "" {
 			code = responseCode
-			c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=http://localhost:8765/individual_user_consent/&scope=offline_access%20user.read.all%20chat.read")
+			c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=http://localhost:8765/individual_user_consent/&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite")
 			return
 		}
 		admin_consent := c.Query("admin_consent")
@@ -333,7 +379,7 @@ func main() {
 		log.Println("scope:", scope)
 
 		req, err := http.NewRequest("POST", "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/token",
-			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read&redirect_uri=http://localhost:8765/individual_user_consent/&code=`+code))
+			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&redirect_uri=http://localhost:8765/individual_user_consent/&code=`+code))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -356,14 +402,33 @@ func main() {
 		if ok {
 			log.Println("access_token", accessToken)
 		}
+		authorizationAccessToken = accessToken.(string)
 
 		refreshToken, ok := response["refresh_token"]
 		if ok {
 			log.Println("refresh_token", refreshToken)
 		}
+		authorizationRefreshToken = refreshToken.(string)
 
-		c.JSON(http.StatusOK, &response)
+		expiresIn, ok := response["expires_in"]
+		if ok {
+			log.Println("expires in", expiresIn)
+		}
+		expiresInSec := expiresIn.(float64)
+		ticker := time.NewTicker(time.Duration(expiresInSec) * time.Second)
+		go func() {
+			select {
+			case <-ticker.C:
+				getRefreshToken()
+			}
+		}()
+
+		c.Redirect(http.StatusFound, "/rwsettings")
 	})
+
+	r.GET("/rwsettings", rwsettings)
+
+	r.Static("/js", "./static/js")
 
 	bind := os.Getenv("BINDADDR")
 	if bind == "" {
