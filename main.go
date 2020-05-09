@@ -346,6 +346,18 @@ func getRefreshToken() {
 		log.Println("refresh_token", refreshToken)
 	}
 	authorizationRefreshToken = refreshToken.(string)
+	expiresIn, ok := response["expires_in"]
+	if ok {
+		log.Println("expires in", expiresIn)
+	}
+	expiresInSec := expiresIn.(float64)
+	ticker := time.NewTicker(time.Duration(expiresInSec-600) * time.Second)
+	go func() {
+		select {
+		case <-ticker.C:
+			getRefreshToken()
+		}
+	}()
 }
 
 func main() {
@@ -415,7 +427,7 @@ func main() {
 			log.Println("expires in", expiresIn)
 		}
 		expiresInSec := expiresIn.(float64)
-		ticker := time.NewTicker(time.Duration(expiresInSec) * time.Second)
+		ticker := time.NewTicker(time.Duration(expiresInSec-600) * time.Second)
 		go func() {
 			select {
 			case <-ticker.C:
