@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	flag "github.com/spf13/pflag"
 )
 
 var (
@@ -19,6 +20,11 @@ var (
 	botAccessToken            string
 	authorizationAccessToken  string
 	authorizationRefreshToken string
+	quit                      = make(chan bool)
+
+	jsDir   string
+	cssDir  string
+	htmlDir string
 )
 
 type AccessTokenRequestBody struct {
@@ -356,11 +362,81 @@ func getRefreshToken() {
 		select {
 		case <-ticker.C:
 			getRefreshToken()
+		case <-quit:
 		}
 	}()
 }
 
+func individualUserConsentHandler(c *gin.Context) {
+	responseCode := c.Query("code")
+	log.Println("code", responseCode)
+	if responseCode != "" {
+		code = responseCode
+		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=http://localhost:8765/individual_user_consent/&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite")
+		return
+	}
+	adminConsent := c.Query("admin_consent")
+	log.Println("admin_consent:", adminConsent)
+	state := c.Query("state")
+	log.Println("state:", state)
+	scope := c.Query("scope")
+	log.Println("scope:", scope)
+
+	req, err := http.NewRequest("POST", "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/token",
+		strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&redirect_uri=http://localhost:8765/individual_user_consent/&code=`+code))
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var response gin.H
+	if err = json.Unmarshal(respBody, &response); err != nil {
+		log.Fatal(err)
+	}
+
+	accessToken, ok := response["access_token"]
+	if ok {
+		log.Println("access_token", accessToken)
+	}
+	authorizationAccessToken = accessToken.(string)
+
+	refreshToken, ok := response["refresh_token"]
+	if ok {
+		log.Println("refresh_token", refreshToken)
+	}
+	authorizationRefreshToken = refreshToken.(string)
+
+	expiresIn, ok := response["expires_in"]
+	if ok {
+		log.Println("expires in", expiresIn)
+	}
+	expiresInSec := expiresIn.(float64)
+	ticker := time.NewTicker(time.Duration(expiresInSec-600) * time.Second)
+	go func() {
+		select {
+		case <-ticker.C:
+			getRefreshToken()
+		case <-quit:
+		}
+	}()
+
+	c.Redirect(http.StatusFound, "/rwsettings")
+}
+
 func main() {
+	flag.StringVarP(&jsDir, "js", "j", "", "js directory")
+	flag.StringVarP(&cssDir, "css", "s", "", "css directory")
+	flag.StringVarP(&htmlDir, "html", "m", "", "html directory")
+	flag.Parse()
+
 	if err := getBotAccessToken(); err != nil {
 		log.Fatal(err)
 	}
@@ -375,72 +451,22 @@ func main() {
 		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=http://localhost:8765/individual_user_consent/&response_mode=query&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&state=12345")
 	})
 
-	r.GET("/individual_user_consent/", func(c *gin.Context) {
-		responseCode := c.Query("code")
-		log.Println("code", responseCode)
-		if responseCode != "" {
-			code = responseCode
-			c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=http://localhost:8765/individual_user_consent/&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite")
-			return
-		}
-		admin_consent := c.Query("admin_consent")
-		log.Println("admin_consent:", admin_consent)
-		state := c.Query("state")
-		log.Println("state:", state)
-		scope := c.Query("scope")
-		log.Println("scope:", scope)
-
-		req, err := http.NewRequest("POST", "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/token",
-			strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&redirect_uri=http://localhost:8765/individual_user_consent/&code=`+code))
-		if err != nil {
-			log.Fatal(err)
-		}
-		client := http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer resp.Body.Close()
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		var response gin.H
-		if err = json.Unmarshal(respBody, &response); err != nil {
-			log.Fatal(err)
-		}
-
-		accessToken, ok := response["access_token"]
-		if ok {
-			log.Println("access_token", accessToken)
-		}
-		authorizationAccessToken = accessToken.(string)
-
-		refreshToken, ok := response["refresh_token"]
-		if ok {
-			log.Println("refresh_token", refreshToken)
-		}
-		authorizationRefreshToken = refreshToken.(string)
-
-		expiresIn, ok := response["expires_in"]
-		if ok {
-			log.Println("expires in", expiresIn)
-		}
-		expiresInSec := expiresIn.(float64)
-		ticker := time.NewTicker(time.Duration(expiresInSec-600) * time.Second)
-		go func() {
-			select {
-			case <-ticker.C:
-				getRefreshToken()
-			}
-		}()
-
-		c.Redirect(http.StatusFound, "/rwsettings")
-	})
+	r.GET("/individual_user_consent/", individualUserConsentHandler)
 
 	r.GET("/rwsettings", rwsettings)
 
-	r.Static("/js", "./static/js")
+	r.Static("/static", "./static")
+
+	if jsDir != "" {
+		r.Static("/js", jsDir)
+	}
+	if cssDir != "" {
+		r.Static("/css", cssDir)
+	}
+
+	if htmlDir != "" {
+		r.Static("/html", htmlDir)
+	}
 
 	bind := os.Getenv("BINDADDR")
 	if bind == "" {
