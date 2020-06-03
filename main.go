@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -45,6 +47,7 @@ type BotMessageConversation struct {
 }
 
 type BotEndpointMessage struct {
+	Name         string                  `json:"name"`
 	Type         string                  `json:"type"`
 	ID           string                  `json:"id"`
 	TimeStamp    time.Time               `json:"timestamp"`
@@ -138,7 +141,7 @@ type BotAccessTokenResponse struct {
 }
 
 func getBotAccessToken() error {
-	body := `grant_type=client_credentials&client_id=24dd1e52-103c-4214-94e8-2b9e5d3085a4&client_secret=0G8b0?l_ZXH-Tf/srNgp3JLS?Q:1Pooa&scope=https%3A%2F%2Fapi.botframework.com%2F.default`
+	body := `grant_type=client_credentials&client_id=24dd1e52-103c-4214-94e8-2b9e5d3085a4&client_secret=3y9z-pNmT9.A.i_tqkzv-R1kCaq9VGrb3t&scope=https%3A%2F%2Fapi.botframework.com%2F.default`
 	req, err := http.NewRequest("POST", "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token", strings.NewReader(body))
 	if err != nil {
 		log.Println("generate request failed:", err)
@@ -303,6 +306,143 @@ func botEndpoint(c *gin.Context) {
 		return
 	}
 	log.Println("botEndpoint raw data:", string(rawData), msg)
+
+	if msg.Name == "composeExtension/query" && msg.Type == "invoke" {
+		res := `{
+  "composeExtension": {
+    "type": "result",
+    "attachmentLayout": "list",
+    "attachments": [
+      {
+        "contentType": "application/vnd.microsoft.teams.card.o365connector",
+        "content": {
+          "sections": [
+            {
+              "activityTitle": "Call Me Back When You Are Available",
+              "activityImage": "https://placekitten.com/200/200"
+            },
+            {
+              "title": "Details",
+              "facts": [
+                {
+                  "name": "Name:",
+                  "value": "[Fan Yang](mailto:fyang3@cisco.com)"
+                },
+				{
+                  "name": "Phone:",
+                  "value": "[Cisco Jabber](https://msteam.ngrok.io/ciscotel)"
+				},
+                {
+                  "name": "State:",
+                  "value": "Active"
+                }
+              ]
+            }
+          ]
+        },
+        "preview": {
+          "contentType": "application/vnd.microsoft.card.thumbnail",
+          "content": {
+            "title": "Call Me Back",
+            "images": [
+              {
+                "url": "https://placekitten.com/200/200"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "contentType": "application/vnd.microsoft.card.adaptive",
+        "content": {
+          "type": "AdaptiveCard",
+          "body": [
+            {
+              "type": "Container",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Microsoft Corp (NASDAQ: MSFT)",
+                  "size": "medium",
+                  "isSubtle": true
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "September 19, 4:00 PM EST",
+                  "isSubtle": true
+                }
+              ]
+            },
+            {
+              "type": "Container",
+              "spacing": "none",
+              "items": [
+                {
+                  "type": "ColumnSet",
+                  "columns": [
+                    {
+                      "type": "Column",
+                      "width": "stretch",
+                      "items": [
+                        {
+                          "type": "TextBlock",
+                          "text": "75.30",
+                          "size": "extraLarge"
+                        },
+                        {
+                          "type": "TextBlock",
+                          "text": "▼ 0.20 (0.32%)",
+                          "size": "small",
+                          "color": "attention",
+                          "spacing": "none"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Column",
+                      "width": "auto",
+                      "items": [
+                        {
+                          "type": "FactSet",
+                          "facts": [
+                            {
+                              "title": "Open",
+                              "value": "62.24"
+                            },
+                            {
+                              "title": "High",
+                              "value": "62.98"
+                            },
+                            {
+                              "title": "Low",
+                              "value": "62.20"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "version": "1.0"
+        },
+        "preview": {
+          "contentType": "application/vnd.microsoft.card.thumbnail",
+          "content": {
+            "title": "Microsoft Corp (NASDAQ: MSFT)",
+            "text": "75.30 ▼ 0.20 (0.32%)"
+          }
+        }
+      }
+    ]
+  }
+}`
+		c.Data(http.StatusOK, "application/json", []byte(res))
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"msg": "OK"})
 	if msg.Value.PreferCallingTool != "" {
 		log.Println("botEndpoint got value:", msg.Value.PreferCallingTool)
@@ -445,7 +585,7 @@ func main() {
 
 	r.LoadHTMLGlob("templates/*")
 
-	r.POST("bot-endpoint", botEndpoint)
+	r.POST("/bot-endpoint", botEndpoint)
 
 	r.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=http://localhost:8765/individual_user_consent/&response_mode=query&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&state=12345")
@@ -454,6 +594,10 @@ func main() {
 	r.GET("/individual_user_consent/", individualUserConsentHandler)
 
 	r.GET("/rwsettings", rwsettings)
+
+	r.GET("/ciscotel", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "protocolhandler.tmpl", gin.H{})
+	})
 
 	r.Static("/static", "./static")
 
@@ -467,6 +611,15 @@ func main() {
 	if htmlDir != "" {
 		r.Static("/html", htmlDir)
 	}
+
+	r.NoRoute(func(c *gin.Context) {
+		remote, err := url.Parse("http://127.0.0.1:8080")
+		if err != nil {
+			panic(err)
+		}
+		rp := httputil.NewSingleHostReverseProxy(remote)
+		rp.ServeHTTP(c.Writer, c.Request)
+	})
 
 	bind := os.Getenv("BINDADDR")
 	if bind == "" {

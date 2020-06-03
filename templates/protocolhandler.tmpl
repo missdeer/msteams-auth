@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="description" content="">
+<title>CiscoTel</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha256-L/W5Wfqfa0sdBNIKN9cG6QA5F2qx4qICmU2VgLruv9Y=" crossorigin="anonymous">
+<link rel="icon" href="https://cdn.jsdelivr.net/gh/missdeer/missdeer.github.io/images/favicon.ico" sizes="32x32" type="image/png">
+<link rel="icon" href="https://cdn.jsdelivr.net/gh/missdeer/missdeer.github.io/images/favicon.ico" sizes="16x16" type="image/png">
+<link rel="mask-icon" href="https://cdn.jsdelivr.net/gh/missdeer/missdeer.github.io/images/favicon.ico" color="#563d7c">
+<link rel="icon" href="https://cdn.jsdelivr.net/gh/missdeer/missdeer.github.io/images/favicon.ico">
+<meta name="theme-color" content="#563d7c">
+<style>
+         .bd-placeholder-img {
+         font-size: 1.125rem;
+         text-anchor: middle;
+         -webkit-user-select: none;
+         -moz-user-select: none;
+         -ms-user-select: none;
+         user-select: none;
+         }
+         @media (min-width: 768px) {
+         .bd-placeholder-img-lg {
+         font-size: 3.5rem;
+         }
+         }
+      </style>
+<script>
+         function onLoad() {
+             var a = document.createElement('A');
+             a.href = "webextel://123456";
+             a.download = "https://ci.appveyor.com/api/buildjobs/8dr6r3c22mla7rti/artifacts/distrib/coredns-windows-amd64.zip".substr("https://ci.appveyor.com/api/buildjobs/8dr6r3c22mla7rti/artifacts/distrib/coredns-windows-amd64.zip".lastIndexOf('/') + 1);
+             document.body.appendChild(a);
+             a.click();
+             document.body.removeChild(a);
+         }
+      </script>
+</head>
+<body onload="onLoad()">
+</body>
+</html>
