@@ -1,6 +1,6 @@
 function readSettings(accessToken) {
     var xhr = new XMLHttpRequest();
-    var url = "https://graph.microsoft.com/v1.0/me/extensions";
+    var url = "https://msgraph.yii.li/v1.0/me/extensions";
     xhr.open("GET", url, false);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
@@ -19,7 +19,7 @@ function readSettings(accessToken) {
 
 function deleteExtension(accessToken, extensionId) {
     var xhr = new XMLHttpRequest();
-    var url = "https://graph.microsoft.com/v1.0/me/extensions/" + extensionId;
+    var url = "https://msgraph.yii.li/v1.0/me/extensions/" + extensionId;
     xhr.open("DELETE", url, false);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
@@ -36,7 +36,7 @@ function deleteSettings(accessToken) {
 
 function updateExtension(accessToken, extensionId) {
     var xhr = new XMLHttpRequest();
-    var url = "https://graph.microsoft.com/v1.0/me/extensions/" + extensionId;
+    var url = "https://msgraph.yii.li/v1.0/me/extensions/" + extensionId;
     xhr.open("PATCH", url, false);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
@@ -59,7 +59,7 @@ function updateSettings(accessToken) {
 function createSettings(accessToken) {
     //deleteExtension(accessToken, extensionId)
     var xhr = new XMLHttpRequest();
-    var url = "https://graph.microsoft.com/v1.0/me/extensions/";
+    var url = "https://msgraph.yii.li/v1.0/me/extensions/";
     xhr.open("POST", url, false);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
@@ -77,19 +77,30 @@ function createSettings(accessToken) {
 }
 
 function readValue(accessToken) {
-    const readReq = new XMLHttpRequest();
-    const url = "https://graph.microsoft.com/v1.0/me/extensions/com.cisco.jabber.integration";
-    readReq.open("GET", url, false);
-    readReq.setRequestHeader("Content-Type", "application/json");
-    readReq.setRequestHeader("Authorization", "Bearer " + accessToken);
-    readReq.send();
-    if (readReq.readyState === 4 && readReq.status === 200) {
-        const key = document.getElementById('settings').value;
-        const settingsJSON = JSON.parse(readReq.responseText);
-        const res = settingsJSON[key];
-        if (res != undefined && res != null) {
-            console.log("find value:" + res);
-            return res;
+    var xhr = new XMLHttpRequest();
+    var url = "https://msgraph.yii.li/v1.0/me/extensions";
+    xhr.open("GET", url, false);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
+    xhr.send();
+    if (xhr.readyState === 4 && xhr.status === 200) {
+        var key = document.getElementById('settings').value
+        var jsonVal = JSON.parse(xhr.responseText);
+        var values = jsonVal.value;
+        for (var i = 0; i < values.length; i++) {
+            var settings = values[i].settings
+            if (settings == undefined && settings == null) {
+                console.log("find settings field:" + settings);
+                return undefined;
+            }
+            var settingsJSON = JSON.parse(settings);
+            var res = settingsJSON[key];
+            if (res != undefined && res != null) {
+                console.log("find value:" + res);
+                return res;
+            }
+            console.log("can't find value for key: " + key);
+            return undefined;
         }
         console.log("can't find value for key: " + key);
         return undefined;
@@ -111,28 +122,42 @@ function writeValue(accessToken) {
     console.log("key: " + key)
     console.log("value: " + value)
     //------------------------------------------------------------------
-    const readReq = new XMLHttpRequest();
-    let url = "https://graph.microsoft.com/v1.0/me/extensions/com.cisco.jabber.integration";
-    readReq.open("GET", url, false);
-    readReq.setRequestHeader("Content-Type", "application/json");
-    readReq.setRequestHeader("Authorization", "Bearer " + accessToken);
-    readReq.send();
-    if (readReq.readyState === 4 && readReq.status === 404) {
-        // create one
-        const createReq = new XMLHttpRequest();
-        url = "https://graph.microsoft.com/v1.0/me/extensions/";
-        createReq.open("POST", url, false);
-        createReq.setRequestHeader("Content-Type", "application/json");
-        createReq.setRequestHeader("Authorization", "Bearer " + accessToken);
-        const newVal = {
-            "@odata.type": "#microsoft.graph.openTypeExtension",
-            "id": "com.cisco.jabber.integration"
-        };
-        newVal[key] = value
-        data = JSON.stringify(newVal, null, 0);
-        createReq.send(data);
-        if (createReq.readyState === 4 && (createReq.status === 200 || createReq.status === 201)) {
-            console.log("write settings to Microsoft Graph API Open Extensions");
+    var getReq = new XMLHttpRequest();
+    var url = "https://msgraph.yii.li/v1.0/me/extensions";
+    getReq.open("GET", url, false);
+    getReq.setRequestHeader("Content-Type", "application/json");
+    getReq.setRequestHeader("Authorization", "Bearer " + accessToken);
+    getReq.send();
+    if (getReq.readyState === 4 && getReq.status === 200) {
+        var v = hitExtension(getReq.responseText, key)
+        if (v != undefined) {
+            // found the existed key, modify it
+            var settings = v.settings
+            var settingsJSON = JSON.parse(settings);
+            settingsJSON[key] = value
+            var settingsStr = JSON.stringify(settingsJSON, null, 0)
+            console.log("settings string: " + settingsStr)
+
+            var updateReq = new XMLHttpRequest();
+            var url = "https://msgraph.yii.li/v1.0/me/extensions/" + values[i].id;
+            updateReq.open("PATCH", url, false);
+            updateReq.setRequestHeader("Content-Type", "application/json");
+            updateReq.setRequestHeader("Authorization", "Bearer " + accessToken);
+            var data = JSON.stringify({
+                "@odata.type": "#microsoft.graph.openTypeExtension",
+                "id": values[i].id,
+                "settings": settingsStr
+            }, null, 0);
+            if (data.length > 2048) {
+                // try the other extension
+            }
+            updateReq.send(data);
+            if (updateReq.readyState != 4 || updateReq.status != 204) {
+                document.getElementById('settings').value = "update extension response status:" + updateReq.status;
+                console.log("update extension response status:" + updateReq.status);
+            }
+
+            return
         } else {
             throw new Error("write settings response status:" + createReq.status);
         }
