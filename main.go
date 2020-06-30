@@ -462,7 +462,7 @@ func rwsettings(c *gin.Context) {
 
 func getRefreshToken() {
 	req, err := http.NewRequest("POST", "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-		strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=refresh_token&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&redirect_uri=http://localhost:8765/individual_user_consent/&refresh_token=`+authorizationRefreshToken))
+		strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=refresh_token&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&refresh_token=`+authorizationRefreshToken))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -512,7 +512,7 @@ func individualUserConsentHandler(c *gin.Context) {
 	log.Println("code", responseCode)
 	if responseCode != "" {
 		code = responseCode
-		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=http://localhost:8765/individual_user_consent/&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite")
+		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/v2.0/adminconsent?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&state=12345&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite")
 		return
 	}
 	adminConsent := c.Query("admin_consent")
@@ -523,7 +523,7 @@ func individualUserConsentHandler(c *gin.Context) {
 	log.Println("scope:", scope)
 
 	req, err := http.NewRequest("POST", "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/token",
-		strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&redirect_uri=http://localhost:8765/individual_user_consent/&code=`+code))
+		strings.NewReader(`client_secret=msHRpSOTQLP24lCk9afnSTejW%3DlV%3F8%3D%40&grant_type=authorization_code&client_id=46442420-1b26-4bd7-a997-183e1880bbd5&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&code=`+code))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -588,7 +588,7 @@ func main() {
 	r.POST("/bot-endpoint", botEndpoint)
 
 	r.GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=http://localhost:8765/individual_user_consent/&response_mode=query&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&state=12345")
+		c.Redirect(http.StatusFound, "https://login.microsoftonline.com/afae2f63-1bcb-4d1f-b8c3-252a4cd3dd07/oauth2/v2.0/authorize?client_id=46442420-1b26-4bd7-a997-183e1880bbd5&response_type=code&redirect_uri=https://msteam.ngrok.io/individual_user_consent/&response_mode=query&scope=offline_access%20user.read.all%20chat.read%20Directory.AccessAsUser.All%20User.ReadWrite&state=12345")
 	})
 
 	r.GET("/individual_user_consent/", individualUserConsentHandler)
