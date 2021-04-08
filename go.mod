@@ -4,6 +4,6 @@ go 1.13
 
 require (
 	github.com/aws/aws-sdk-go v1.38.15
-	github.com/gin-gonic/gin v1.6.3
+	github.com/gin-gonic/gin v1.7.0
 	github.com/spf13/pflag v1.0.5
 )
