@@ -1,0 +1,19 @@
+version: 2
+updates:
+- package-ecosystem: gomod
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "21:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: github.com/aws/aws-sdk-go
+    versions:
+    - 1.37.12
+    - 1.37.15
+    - 1.38.2
+    - 1.38.27
+    - 1.38.7
+  - dependency-name: github.com/gin-gonic/gin
+    versions:
+    - 1.7.0
